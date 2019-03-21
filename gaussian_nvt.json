@@ -1,0 +1,25 @@
+{
+	"name":"pre-eq",
+	"engine":"gaussian",
+	"path":"g09",
+	"template":"template.gjf",
+	"type":"nvt",
+	"constraint":[
+		{
+			"type":"b",
+			"index":[0,1],
+			"value":1.5
+		},
+		{
+			"type":"a",
+			"index":[0,1,2],
+			"value":100.0
+		}
+	],
+	"temperature":300.0,
+	"coordinate":"1.xyz",
+	"velocity":null,
+	"nsteps":20000,
+	"dt":0.5,
+	"savefreq":10
+}

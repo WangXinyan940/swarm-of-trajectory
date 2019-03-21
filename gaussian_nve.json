@@ -1,0 +1,29 @@
+{
+	"name":"sot",
+	"engine":"gaussian",
+	"path":"g09",
+	"template":"template.gjf",
+	"type":"nve",
+	"coordinate":"traj.xyz",
+	"pick_rull":{
+		"start":500,
+		"end":null
+	},
+	"velocity":null,
+	"nsteps":2000,
+	"dt":0.5,
+	"savefreq":4,
+	"checktime":200,
+	"checkcv":[
+		{
+			"type":"b",
+			"index":[0,1],
+			"value":[1.5,500.0]
+		},
+		{
+			"type":"a",
+			"index":[0,1,2],
+			"value":[100.0,180.0]
+		}
+	],
+}
