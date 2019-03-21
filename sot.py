@@ -1,5 +1,6 @@
 import numpy as np
 import sys
+import json
 
 
 def printTitle():
@@ -23,20 +24,7 @@ def printHelp():
     """
     print("""
     Usage:
-        python sot.py 
-
-    -n --name      job name. Use name of input coord file by default.
-    --xin          input coordinate
-    --vin          input velocities
-    --xout         output coordinate
-    --vout         output velocities
-    --nout         frequency of output details
-    --nvt          constraint nvt
-    -t --temp      initial temperature
-    --nve          nve dynamics
-    --nsteps       num of steps
-    --dt           time step (fs)
-    -h --help      help
+        python sot.py -j json
     """)
 
 
@@ -44,11 +32,12 @@ def argparse():
     """
     Parse the args.
     """
-    if "-h" in sys.argv or "--help" in sys.argv:
+    if "-j" not in sys.argv:
         printHelp()
         exit()
-    for i in sys.argv[1:]:
-        print(i)
+    with open(sys.argv[2], "r") as f:
+        text = "".join(f)
+    return json.loads(text)
 
 
 def main():
