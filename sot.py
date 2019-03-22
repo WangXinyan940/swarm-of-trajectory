@@ -8,7 +8,7 @@ BOHR = 5.291772108e-11  # Bohr -> m
 ANGSTROM = 1e-10  # angstrom -> m
 AMU = 1.660539040e-27  # amu -> kg
 FS = 1e-15  # fs -> s
-EH = 4.35974417e-18  # Hatree -> J
+EH = 4.35974417e-18  # Hartrees -> J
 H = 6.626069934e-34
 KB = 1.38064852e-23
 
@@ -91,6 +91,13 @@ def writeXYZ():
     pass
 
 
+def distance(crd, i, j):
+    """
+    Calc distance of two points.
+    """
+    return np.sqrt(((crd[i,:] - crd[j,:]) ** 2).sum())
+
+
 def genMassMat(atom):
     """
     Generate matrix of mass.
@@ -127,7 +134,7 @@ def testTemplate(conf):
              [0.0, 1.0, 0.0]]
     template = readFile(conf["force"]["template"],
                         lambda x: Template("".join(x)))
-    print("Generate template below:\n++++++++++++++++++++++++")
+    print(">>> Generate template below:\n++++++++++++++++++++++++++++")
     print(genQMInput(t_atom, t_xyz, template, pre=True))
 
 
@@ -212,6 +219,7 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
         crd = crd + vel * dt + 0.5 * (f / massm) * dt ** 2
         f_old = f
         e, f = - grad(atom, crd, nstep=nstep)
+        print(">>> step: %i    e:%10.4f" % (nstep, e / EH))
         if md["type"].upper() == "NVT":
             f = f - gamma * vel + \
                 np.sqrt(2. * gamma * KB * T) * \
@@ -226,7 +234,14 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
                 writeXYZ("%s-vel.xyz" % NAME, vel / (ANGSTROM / FS),
                          title="E:%10.6f NSTEP:%i" % (e, nstep), append=True)
         # check_traj
-
+        if "time" in chk and nstep == chk["time"]:
+            for cv in chk["time"]["cv"]:
+                if cv["type"].append() == "b":
+                    r = distance(crd / ANGSTROM,
+                                 cv["index"][0], cv["index"][1])
+                    if r < cv["range"][0] or r > cv["range"][1]:
+                        print(">>> Bond %i-%i out of range. Stop." %
+                              (cv["index"][0], cv["index"][1]))
         # check_stop
 
 
@@ -249,7 +264,7 @@ def main():
     atom, crd, vel = setInitMotion(conf["init"])
     # run dynamics
     dynamics(atom, crd, vel, grad=grad, conf=conf)
-    print("STDSP is finished.")
+    print(">>> STDSP is finished.")
 
 
 if __name__ == '__main__':
