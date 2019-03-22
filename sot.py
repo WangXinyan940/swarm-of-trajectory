@@ -3,7 +3,7 @@ import os
 import json
 import numpy as np
 from jinja2 import Template
-
+NAME = ""
 BOHR = 5.291772108e-11  # Bohr -> m
 ANGSTROM = 1e-10  # angstrom -> m
 AMU = 1.660539040e-27  # amu -> kg
@@ -67,10 +67,27 @@ def readMultiXYZ(text):
     pass
 
 
-def readGauGrad(text):
+def readGauGrad(text, natoms):
     """
     Read Gaussian output and find energy gradient.
     """
+    ener = [i for i in text if "SCF Done:" in i]
+    if len(ener) != 0:
+        ener = ener[-1]
+        ener = np.float64(ener.split()[4])
+    else:
+        ener = np.float64([i for i in text if "Energy=" in i][-1].split()[1])
+    for ni, li in enumerate(text):
+        if "Forces (Hartrees/Bohr)" in li:
+            break
+    forces = text[ni + 3:ni + 3 + natoms]
+    forces = [i.strip().split()[-3:] for i in forces]
+    forces = [[np.float64(i[0]), np.float64(i[1]), np.float64(i[2])]
+              for i in forces]
+    return ener * EH, -np.array(forces) * EH / BOHR
+
+
+def writeXYZ():
     pass
 
 
@@ -141,9 +158,14 @@ def calcGauGrad(atom, crd, template, nstep, path="g09"):
         f.write(genQMInput(atom, crd, template,
                            pre=False if nstep == 0 else True, nstep=nstep))
     os.system("{} tmp.gjf".format(path))
-    grad = readFile("tmp.log", readGauGrad)
+    grad = readFile("tmp.log", lambda x: readGauGrad(x, len(atom)))
     os.system("cp tmp.chk old.chk && rm tmp.gjf tmp.log tmp.chk")
     return grad
+
+
+def genGrad(conf, template):
+    if conf["engine"].upper() == "GAUSSIAN":
+        return lambda atom, crd, nstep: calcGauGrad(atom, crd / ANGSTROM, template, nstep, conf["path"])
 
 
 def setInitMotion(conf):
@@ -172,20 +194,61 @@ def setInitMotion(conf):
     return atom, crd, vel
 
 
+def dynamics(atom, initx, initv, grad=None, conf=None):
+    """
+    Run dynamics. Using Velocity verlet algorithm.
+    """
+    md, prt, chk, stop = conf["md"], conf["print"], conf["check"], conf["stop"]
+    dt = md["deltat"] * FS
+    if md["type"].upper() == "NVT":
+        T = md["temperature"]
+        gamma = md["gamma"]
+    crd = initx
+    vel = initv
+    e, f = - grad(atom, crd, nstep=-1)
+    massm = genMassMat(atom) * AMU
+    for nstep in range(md["nsteps"]):
+        # velocity verlet
+        crd = crd + vel * dt + 0.5 * (f / massm) * dt ** 2
+        f_old = f
+        e, f = - grad(atom, crd, nstep=nstep)
+        if md["type"].upper() == "NVT":
+            f = f - gamma * vel + \
+                np.sqrt(2. * gamma * KB * T) * \
+                np.random.normal(0.0, np.ones(crd.shape))
+        vel = vel + 0.5 * (f_old + f) / massm * dt
+        # print
+        if "freq" in prt and nstep % prt["freq"] == 0:
+            if prt["coordinate"]:
+                writeXYZ("%s-traj.xyz" % NAME, crd / ANGSTROM,
+                         title="E:%10.6f NSTEP:%i" % (e, nstep), append=True)
+            if prt["coordinate"]:
+                writeXYZ("%s-vel.xyz" % NAME, vel / (ANGSTROM / FS),
+                         title="E:%10.6f NSTEP:%i" % (e, nstep), append=True)
+        # check_traj
+
+        # check_stop
+
+
 def main():
     """
     The main function.
     """
     printTitle()
     conf = argparse()
+
+    global NAME
+    NAME = conf["name"]
+
     # build template for qm engine
     template = readFile(conf["force"]["template"],
                         lambda x: Template("".join(x)))
+
+    grad = genGrad(conf["force"], template)
     # select init crd and vel
     atom, crd, vel = setInitMotion(conf["init"])
     # run dynamics
-    dynamics(atom, crd, vel, setting=conf["md"], out=conf[
-             "print"], check=conf["check"], stop=conf["stop"])
+    dynamics(atom, crd, vel, grad=grad, conf=conf)
     print("STDSP is finished.")
 
 
