@@ -217,7 +217,7 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
     """
     Run dynamics. Using Velocity verlet algorithm.
     """
-    md, prt, chk, stop = conf["md"], conf["print"], conf["check"], conf["stop"]
+    md, prt, cons, chk, stop = conf["md"], conf["print"], conf["constraint"], conf["check"], conf["stop"]
     dt = md["deltat"] * FS
     if md["type"].upper() == "NVT":
         T = md["temperature"]
@@ -231,6 +231,12 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
         crd = crd + vel * dt + 0.5 * (f / massm) * dt ** 2
         f_old = f
         e, f = - grad(atom, crd, nstep=nstep)
+        for cv in cons:
+            if cv["type"].upper() == "B":
+                ia, ib = cv["index"]
+                fa, fb = bondgradient(crd[ia], crd[ib], cv["value"])
+                f[ia,:] = f[ia,:] + fa
+                f[ib,:] = f[ib,:] + fb
         print(">>> step: %i    e:%10.4f" % (nstep, e / EH))
         if md["type"].upper() == "NVT":
             f = f - gamma * vel + \
