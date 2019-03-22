@@ -116,6 +116,10 @@ def distance(crd, i, j):
     return np.sqrt(((crd[i,:] - crd[j,:]) ** 2).sum())
 
 
+def bondforce(vi, vj, b, k):
+    pass
+
+
 def genMassMat(atom):
     """
     Generate matrix of mass.
@@ -234,7 +238,7 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
         for cv in cons:
             if cv["type"].upper() == "B":
                 ia, ib = cv["index"]
-                fa, fb = bondgradient(crd[ia], crd[ib], cv["value"])
+                fa, fb = bondforce(crd[ia], crd[ib], cv["value"] * ANGSTROM, k=1000000.0 * (EH / ANGSTROM ** 2))
                 f[ia,:] = f[ia,:] + fa
                 f[ib,:] = f[ib,:] + fb
         print(">>> step: %i    e:%10.4f" % (nstep, e / EH))
