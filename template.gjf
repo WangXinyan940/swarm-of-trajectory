@@ -1,6 +1,9 @@
 %nproc=24
 %mem=2000mw
-#p M062X/6-31G* nosymm force int=ultrafine
+{%- if pre %}
+{{ "%oldchk=old.chk" }}
+{%- endif %}
+#p M062X/6-31G* nosymm force int=ultrafine {% if pre %}{{ "guess=read" }}{% endif %}
 
 Title
 
