@@ -8,13 +8,13 @@ def printTitle():
     Print the title of the output result.
     """
     print("""
-    --------------------------------------------------
-    | Swarm-of-Trajectory Dynamic Simulation Package
-    | 
-    | Version: 0.1
-    | Program Language: Python 3.6
-    | Developer: Xinyan Wang
-    --------------------------------------------------
+--------------------------------------------------
+| Swarm-of-Trajectory Dynamic Simulation Package
+| 
+| Version: 0.1
+| Program Language: Python 3.6
+| Developer: Xinyan Wang
+--------------------------------------------------
     """)
 
 
