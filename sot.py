@@ -84,11 +84,29 @@ def readGauGrad(text, natoms):
     forces = [i.strip().split()[-3:] for i in forces]
     forces = [[np.float64(i[0]), np.float64(i[1]), np.float64(i[2])]
               for i in forces]
-    return ener * EH, -np.array(forces) * EH / BOHR
+    return ener * EH, - np.array(forces) * EH / BOHR
 
 
-def writeXYZ():
-    pass
+
+
+def genQMInput(atom, crd, temp, pre=False, nstep=-1):
+    """
+    Generate QM Input file for force calculation.
+    """
+    return temp.render(data=zip(atom, crd), pre=pre, nstep=nstep)
+
+
+def writeXYZ(fname, atom, xyz, title="Title", append=False):
+    if append:
+        f = open(fname, "a")
+    else:
+        f = open(fname, "w")
+    f.write("%i\n"%len(atom))
+    f.write("%s\n"%(title.rstrip()))
+    for i in range(len(atom)):
+        x, y, z = xyz[i,:]
+        f.write("%s  %12.8f %12.8f %12.8f\n"%(atom[i], x, y, z))
+    f.close()
 
 
 def distance(crd, i, j):
@@ -116,12 +134,6 @@ def genMassMat(atom):
     massm[:, 2] = massv
     return massm
 
-
-def genQMInput(atom, crd, temp, pre=False, nstep=-1):
-    """
-    Generate QM Input file for force calculation.
-    """
-    return temp.render(data=zip(atom, crd), pre=pre, nstep=nstep)
 
 
 def testTemplate(conf):
@@ -228,21 +240,33 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
         # print
         if "freq" in prt and nstep % prt["freq"] == 0:
             if prt["coordinate"]:
-                writeXYZ("%s-traj.xyz" % NAME, crd / ANGSTROM,
+                writeXYZ("%s-traj.xyz" % NAME, atom, crd / ANGSTROM,
                          title="E:%10.6f NSTEP:%i" % (e, nstep), append=True)
             if prt["coordinate"]:
-                writeXYZ("%s-vel.xyz" % NAME, vel / (ANGSTROM / FS),
+                writeXYZ("%s-vel.xyz" % NAME, atom, vel / (ANGSTROM / FS),
                          title="E:%10.6f NSTEP:%i" % (e, nstep), append=True)
         # check_traj
         if "time" in chk and nstep == chk["time"]:
             for cv in chk["time"]["cv"]:
-                if cv["type"].append() == "b":
+                if cv["type"].upper() == "B":
                     r = distance(crd / ANGSTROM,
                                  cv["index"][0], cv["index"][1])
                     if r < cv["range"][0] or r > cv["range"][1]:
                         print(">>> Bond %i-%i out of range. Stop." %
                               (cv["index"][0], cv["index"][1]))
+                        return
         # check_stop
+        for state in stop:
+            ifquit = True
+            for cv in state["cv"]:
+                if cv["type"].upper() == "B":
+                    r = distance(crd / ANGSTROM,
+                                 cv["index"][0], cv["index"][1])
+                    if r < cv["range"][0] or r > cv["range"][1]:
+                        ifquit = False
+                        break
+            if ifquit:
+                print(">>> Get state %s. Stop."%state["name"])
 
 
 def main():
