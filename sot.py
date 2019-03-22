@@ -50,11 +50,11 @@ def readXYZ(text):
     crd = [[float(j) for j in i[1:]] for i in body]
     return atom, crd
 
-def genQMInput(atom, crd, temp):
+def genQMInput(atom, crd, temp, pre=False):
     """
     Generate QM Input file for force calculation.
     """
-    return temp.render(data=zip(atom, crd))
+    return temp.render(data=zip(atom, crd), pre=pre)
 
 
 def testTemplate(conf):
@@ -68,7 +68,7 @@ def testTemplate(conf):
     template = readFile(conf["force"]["template"],
                         lambda x: Template("".join(x)))
     print("Generate template below:\n++++++++++++++++++++++++")
-    print(genQMInput(t_atom, t_xyz, template))
+    print(genQMInput(t_atom, t_xyz, template, pre=True))
 
 
 def argparse():
