@@ -1,0 +1,12 @@
+%nproc=24
+%mem=2000mw
+#p M062X/6-31G* nosymm force int=ultrafine
+
+Title
+
+0 1
+{% for l in data %}
+  {{ l[0] }}   {{ l[1][0] }}  {{ l[1][1] }}  {{ l[1][2] }}
+{% endfor %}
+
+
