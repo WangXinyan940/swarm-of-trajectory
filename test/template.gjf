@@ -1,0 +1,18 @@
+%nproc=8
+%mem=2000mw
+%chk=tmp.chk
+{%- if pre %}
+{{ "%oldchk=old.chk" }}
+{%- endif %}
+#p HF/6-31G* nosymm force {% if pre %}{{ "guess=read" }}{% endif %}
+
+Temparary input file for step {{ nstep }}
+
+0 1
+{%- for l in data %}
+  {{ l[0] }}   {{ l[1][0] }}  {{ l[1][1] }}  {{ l[1][2] }}
+{%- endfor %}
+
+
+
+
