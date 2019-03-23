@@ -1,3 +1,5 @@
+#!python
+#coding=utf-8
 import sys
 import os
 import json
@@ -64,8 +66,15 @@ def readMultiXYZ(text):
     """
     Read XYZ file with multi conformations.
     """
-    pass
-
+    xyzs = []
+    ip = 0
+    while True:
+        natom = int(text[ip].strip())
+        xyzs.append(text[ip:ip + natom + 2])
+        ip = ip + natom + 2
+        if ip >= len(text):
+            break
+    return [readXYZ(i) for i in xyzs]
 
 def readGauGrad(text, natoms):
     """
@@ -97,6 +106,9 @@ def genQMInput(atom, crd, temp, pre=False, nstep=-1):
 
 
 def writeXYZ(fname, atom, xyz, title="Title", append=False):
+    """
+    Write file with XYZ format.
+    """
     if append:
         f = open(fname, "a")
     else:
@@ -117,7 +129,19 @@ def distance(crd, i, j):
 
 
 def bondforce(vi, vj, b, k):
-    pass
+    """
+    Calculate force on bond
+    """
+    gi, gj = np.zeros(vi.shape), np.zeros(vj.shape)
+    r = np.sqrt(((vi - vj) ** 2).sum())
+    fr = 2 * k * (r - b)
+    if r < b:
+        pass
+    else:
+        pass
+    return gi, gj
+
+
 
 
 def genMassMat(atom):
