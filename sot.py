@@ -3,9 +3,7 @@
 import sys
 import os
 import json
-import pdb
 import numpy as np
-from jinja2 import Template
 NAME = ""
 BOHR = 5.291772108e-11  # Bohr -> m
 ANGSTROM = 1e-10  # angstrom -> m
@@ -39,7 +37,10 @@ def printHelp():
     """
     print("""
     Usage:
-        python sot.py -j json -t template
+        python sot.py -j json -t 
+
+        -j        configuration .json file
+        -t        test the accuracy of template .gjf file
     """)
 
 
