@@ -247,30 +247,60 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
     """
     md, prt, cons, chk, stop = conf["md"], conf["print"], conf["constraint"], conf["check"], conf["stop"]
     dt = md["deltat"] * FS
+    massm = genMassMat(atom) * AMU
     if md["type"].upper() == "NVT":
         T = md["temperature"]
-        gamma = md["gamma"]
+        friction = md["friction"] * (1000.0 * FS)
+        kT = KB * T
+        vscale = np.exp( - dt * friction)
+        fscale = dt if friction == 0.0 else (1 - vscale) / friction
+        noisescale = np.sqrt(kT * (1.0 - vscale ** 2))
+        invmass = 1. / massm
+        sqrtinvmass = np.sqrt(invmass)
+
     crd = initx
     vel = initv
+    
     e, f = - grad(atom, crd, nstep=-1)
-    massm = genMassMat(atom) * AMU
+    for cv in cons:
+        if cv["type"].upper() == "B":
+            ia, ib = cv["index"]
+            fa, fb = bondforce(crd[ia], crd[ib], cv["value"] * ANGSTROM, k=1000000.0 * (EH / ANGSTROM ** 2))
+            f[ia,:] = f[ia,:] + fa
+            f[ib,:] = f[ib,:] + fb
+
     for nstep in range(md["nsteps"]):
-        # velocity verlet
-        crd = crd + vel * dt + 0.5 * (f / massm) * dt ** 2
-        f_old = f
-        e, f = - grad(atom, crd, nstep=nstep)
-        for cv in cons:
-            if cv["type"].upper() == "B":
-                ia, ib = cv["index"]
-                fa, fb = bondforce(crd[ia], crd[ib], cv["value"] * ANGSTROM, k=1000000.0 * (EH / ANGSTROM ** 2))
-                f[ia,:] = f[ia,:] + fa
-                f[ib,:] = f[ib,:] + fb
-        print(">>> step: %i    e:%10.4f" % (nstep, e / EH))
-        if md["type"].upper() == "NVT":
-            f = f - gamma * vel + \
-                np.sqrt(2. * gamma * KB * T) * \
-                np.random.normal(0.0, np.ones(crd.shape))
-        vel = vel + 0.5 * (f_old + f) / massm * dt
+        if md["type"].upper() == "NVE":
+            # velocity verlet
+            crd = crd + vel * dt + 0.5 * (f / massm) * dt ** 2
+            f_old = f
+            e, f = - grad(atom, crd, nstep=nstep)
+            for cv in cons:
+                if cv["type"].upper() == "B":
+                    ia, ib = cv["index"]
+                    fa, fb = bondforce(crd[ia], crd[ib], cv["value"] * ANGSTROM, k=100000.0 * (1. / 6.02e23 / ANGSTROM ** 2))
+                    f[ia,:] = f[ia,:] + fa
+                    f[ib,:] = f[ib,:] + fb
+            print(">>> step: %i    e:%10.4f" % (nstep, e / EH))
+            vel = vel + 0.5 * (f_old + f) / massm * dt
+
+        elif md["type"].upper() == "NVT":
+            # langevin dynamics
+            print(">>> step: %i    e:%10.4f" % (nstep, e / EH))
+            # step1
+            vel = vscale * vel + fscale * invmass * f + noisescale * sqrtinvmass * np.random.normal(0., np.ones(vel.shape))
+            # step2
+            pre_crd = crd
+            crd = crd + vel * dt
+            # step3
+            vel = (crd - pre_crd) / dt
+            e, f = - grad(atom, crd, nstep=-1)
+            for cv in cons:
+                if cv["type"].upper() == "B":
+                    ia, ib = cv["index"]
+                    fa, fb = bondforce(crd[ia], crd[ib], cv["value"] * ANGSTROM, k=100000.0 * (1000.0 / ANGSTROM ** 2)) # kJ / A^2
+                    f[ia,:] = f[ia,:] + fa
+                    f[ib,:] = f[ib,:] + fb
         # print
         if "freq" in prt and nstep % prt["freq"] == 0:
             if prt["coordinate"]:
