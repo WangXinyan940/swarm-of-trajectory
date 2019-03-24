@@ -1,0 +1,65 @@
+{
+	"name":"sot-dyn",
+	"force":{
+		"engine":"gaussian",
+		"path":"g09",
+		"template":"template.gjf"
+	},
+
+
+	"md":{
+		"type":"nve",
+		"nsteps":1000,
+		"deltat":0.5
+	},
+
+	"init":{
+		"coordinate":"sot-traj.xyz",
+		"velocity":"sot-vel.xyz",
+		"start":1000
+	},
+	
+	
+	"print":{
+		"freq":2,
+		"coordinate":true,
+		"velocity":true
+	},
+
+	"constraint":[
+	],
+
+	"check":{
+		"time":10,
+		"cv":[
+			{
+				"type":"B",
+				"index":[0, 4],
+				"range":[0.0, 2.34691]
+			}
+		]
+	},
+
+	"stop":[
+		{
+			"name":"MeBr",
+			"cv":[
+				{
+					"type":"B",
+					"index":[0,4],
+					"range":[0.0, 1.9]
+				}
+			]
+		},
+		{
+			"name":"MeCl",
+			"cv":[
+				{
+					"type":"B",
+					"index":[0,5],
+					"range":[0.0,1.9]
+				}
+			]
+		}
+	]
+}

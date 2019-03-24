@@ -1,0 +1,51 @@
+{
+	"name":"sot",
+	"force":{
+		"engine":"gaussian",
+		"path":"g09",
+		"template":"template.gjf"
+	},
+
+
+	"md":{
+		"type":"nvt",
+		"temperature":300,
+		"friction":0.5,
+		"nsteps":200000,
+		"deltat":0.5,
+		"fixcom":true
+	},
+
+	"init":{
+		"coordinate":"init.xyz",
+		"velocity":null,
+		"temperature":300,
+		"start":null
+	},
+	
+	
+	"print":{
+		"freq":1,
+		"coordinate":true,
+		"velocity":true
+	},
+
+	"constraint":[
+		{
+			"type":"B",
+			"index":[0, 5],
+			"value":2.50255
+		},
+		{
+			"type":"B",
+			"index":[0, 4],
+			"value":2.37829
+		}
+	],
+
+	"check":{
+	},
+
+	"stop":[
+	]
+}
