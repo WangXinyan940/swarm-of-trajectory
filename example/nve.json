@@ -30,7 +30,7 @@
 	],
 
 	"check":{
-		"time":10,
+		"time":5,
 		"cv":[
 			{
 				"type":"B",

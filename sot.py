@@ -294,6 +294,16 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
             f[ib,:] = f[ib,:] + fb
 
     for nstep in range(md["nsteps"]):
+        # print
+        if "freq" in prt and nstep % prt["freq"] == 0:
+            KE = (0.5 * massm * vel * vel).sum() / vel.shape[0] / vel.shape[1]
+            Tseq = KE * 2.0 / KB
+            if prt["coordinate"]:
+                writeXYZ("%s-traj.xyz" % NAME, atom, crd / ANGSTROM,
+                         title="NSTEP:%i E:%10.6f T:%8.4f" % (nstep, e / EH, Tseq), append=True if nstep > 0 else False)
+            if prt["coordinate"]:
+                writeXYZ("%s-vel.xyz" % NAME, atom, vel / (ANGSTROM / FS),
+                         title="NSTEP:%i E:%10.6f T:%8.4f" % (nstep, e / EH, Tseq), append=True if nstep > 0 else False)
         if md["type"].upper() == "NVE":
             # velocity verlet
             crd = crd + vel * dt + 0.5 * (f / massm) * dt ** 2
@@ -340,16 +350,6 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
                     fa, fb = bondforce(crd[ia], crd[ib], cv["value"] * ANGSTROM, k=kconst) # kJ / A^2
                     f[ia,:] = f[ia,:] + fa
                     f[ib,:] = f[ib,:] + fb
-        # print
-        if "freq" in prt and nstep % prt["freq"] == 0:
-            KE = (0.5 * massm * vel * vel).sum() / vel.shape[0] / vel.shape[1]
-            Tseq = KE * 2.0 / KB
-            if prt["coordinate"]:
-                writeXYZ("%s-traj.xyz" % NAME, atom, crd / ANGSTROM,
-                         title="NSTEP:%i E:%10.6f T:%8.4f" % (nstep, e / EH, Tseq), append=True if nstep > 0 else False)
-            if prt["coordinate"]:
-                writeXYZ("%s-vel.xyz" % NAME, atom, vel / (ANGSTROM / FS),
-                         title="NSTEP:%i E:%10.6f T:%8.4f" % (nstep, e / EH, Tseq), append=True if nstep > 0 else False)
         # check_traj
         if "time" in chk and nstep == chk["time"]:
             for cv in chk["cv"]:

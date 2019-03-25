@@ -1,0 +1,22 @@
+{	
+	"data":[
+		{
+			"path":"./traj/",
+			"name":"sot-dyn-traj.xyz"
+		}
+	],
+	"minlength":20,
+	"output":"traj.png",
+	"cv":[
+		{	
+			"name":"C-Cl distance",
+			"type":"B",
+			"index":[0,4]
+		},
+		{
+			"name":"C-Br distance",
+			"type":"B",
+			"index":[0,5]
+		}
+	]
+}
