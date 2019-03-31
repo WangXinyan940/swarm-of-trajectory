@@ -1,5 +1,15 @@
 #!python
 #coding=utf-8
+"""
+----------------------------------------------------------------
+| Swarm-of-Trajectory Dynamic Simulation Package
+| 
+| Version: 0.1
+| Program Language: Python 3.6
+| Developer: Xinyan Wang
+| Homepage: https://github.com/WangXinyan940/swarm-of-trajectory
+----------------------------------------------------------------
+"""
 import sys
 import os
 import json
@@ -160,6 +170,20 @@ def bondforce(vi, vj, b, k):
         gi = (vj - vi) / r * fr
     gj = - gi
     return gi, gj
+
+
+def angle(crd, i, j, k):
+    """
+    Calculate i-j-k angle in rad unit.
+    """
+    pass
+
+
+def angleforce(vi, vj, vk, b, k):
+    """
+    Harmonic force to fix i-j-k angle at value b (rad).
+    """
+    pass
 
 
 
@@ -347,7 +371,7 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
             for cv in cons:
                 if cv["type"].upper() == "B":
                     ia, ib = cv["index"]
-                    fa, fb = bondforce(crd[ia], crd[ib], cv["value"] * ANGSTROM, k=kconst) # kJ / A^2
+                    fa, fb = bondforce(crd[ia], crd[ib], cv["value"] * ANGSTROM, k=cv["kconst"] if "kconst" in cv else kconst) # kJ / A^2
                     f[ia,:] = f[ia,:] + fa
                     f[ib,:] = f[ib,:] + fb
         # check_traj
