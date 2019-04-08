@@ -1,15 +1,18 @@
 #!python
-#coding=utf-8
+# coding=utf-8
 """
 ----------------------------------------------------------------
 | Swarm-of-Trajectory Dynamic Simulation Package
 | 
 | Version: 0.1
-| Program Language: Python 3.6
+| Program Language: Python 3.6 (also support py2.7)
 | Developer: Xinyan Wang
 | Homepage: https://github.com/WangXinyan940/swarm-of-trajectory
 ----------------------------------------------------------------
 """
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import print_function
 import sys
 import os
 import json
@@ -89,6 +92,7 @@ def readMultiXYZ(text):
             break
     return [readXYZ(i) for i in xyzs]
 
+
 def readGauGrad(text, natoms):
     """
     Read Gaussian output and find energy gradient.
@@ -109,8 +113,6 @@ def readGauGrad(text, natoms):
     return ener * EH, - np.array(forces) * EH / BOHR
 
 
-
-
 def genQMInput(atom, crd, temp, pre=False, nstep=-1):
     """
     Generate QM Input file for force calculation.
@@ -122,10 +124,10 @@ def genQMInput(atom, crd, temp, pre=False, nstep=-1):
         wrt.append("%oldchk=old.chk\n")
     for line in temp:
         if "[title]" in line:
-            wrt.append("Temparary input file for step %i\n"%nstep)
+            wrt.append("Temparary input file for step %i\n" % nstep)
         elif "[coord]" in line:
             for ni in range(len(atom)):
-                wrt.append("%s  %16.8f %16.8f %16.8f\n"%(atom[ni], *crd[ni]))
+                wrt.append("%s  %16.8f %16.8f %16.8f\n" % (atom[ni], crd[ni][0], crd[ni][1], crd[ni][2]))
         elif line[0] == "#":
             wrt.append(line)
             if pre == True:
@@ -143,11 +145,11 @@ def writeXYZ(fname, atom, xyz, title="Title", append=False):
         f = open(fname, "a")
     else:
         f = open(fname, "w")
-    f.write("%i\n"%len(atom))
-    f.write("%s\n"%(title.rstrip()))
+    f.write("%i\n" % len(atom))
+    f.write("%s\n" % (title.rstrip()))
     for i in range(len(atom)):
-        x, y, z = xyz[i,:]
-        f.write("%s  %12.8f %12.8f %12.8f\n"%(atom[i], x, y, z))
+        x, y, z = xyz[i, :]
+        f.write("%s  %12.8f %12.8f %12.8f\n" % (atom[i], x, y, z))
     f.close()
 
 
@@ -155,7 +157,7 @@ def distance(crd, i, j):
     """
     Calc distance of two points.
     """
-    return np.sqrt(((crd[i,:] - crd[j,:]) ** 2).sum())
+    return np.sqrt(((crd[i, :] - crd[j, :]) ** 2).sum())
 
 
 def bondforce(vi, vj, b, k):
@@ -186,8 +188,6 @@ def angleforce(vi, vj, vk, b, k):
     pass
 
 
-
-
 def genMassMat(atom):
     """
     Generate matrix of mass.
@@ -205,7 +205,6 @@ def genMassMat(atom):
     massm[:, 1] = massv
     massm[:, 2] = massv
     return massm
-
 
 
 def testTemplate(conf):
@@ -292,14 +291,15 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
     """
     Run dynamics. Using Velocity verlet algorithm.
     """
-    md, prt, cons, chk, stop = conf["md"], conf["print"], conf["constraint"], conf["check"], conf["stop"]
+    md, prt, cons, chk, stop = conf["md"], conf["print"], conf[
+        "constraint"], conf["check"], conf["stop"]
     dt = md["deltat"] * FS
     massm = genMassMat(atom) * AMU
     if md["type"].upper() == "NVT":
         T = md["temperature"]
         friction = md["friction"] / (1000.0 * FS)
         kT = KB * T
-        vscale = np.exp( - dt * friction)
+        vscale = np.exp(- dt * friction)
         fscale = dt if friction == 0.0 else (1 - vscale) / friction
         noisescale = np.sqrt(kT * (1.0 - vscale ** 2))
         invmass = 1. / massm
@@ -307,15 +307,15 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
 
     crd = initx
     vel = initv
-    
+
     e, f = grad(atom, crd, nstep=-1)
     f = -f
     for cv in cons:
         if cv["type"].upper() == "B":
             ia, ib = cv["index"]
             fa, fb = bondforce(crd[ia], crd[ib], cv["value"] * ANGSTROM, k=kconst)
-            f[ia,:] = f[ia,:] + fa
-            f[ib,:] = f[ib,:] + fb
+            f[ia, :] = f[ia, :] + fa
+            f[ib, :] = f[ib, :] + fb
 
     for nstep in range(md["nsteps"]):
         # print
@@ -338,8 +338,8 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
                 if cv["type"].upper() == "B":
                     ia, ib = cv["index"]
                     fa, fb = bondforce(crd[ia], crd[ib], cv["value"] * ANGSTROM, k=kconst)
-                    f[ia,:] = f[ia,:] + fa
-                    f[ib,:] = f[ib,:] + fb
+                    f[ia, :] = f[ia, :] + fa
+                    f[ib, :] = f[ib, :] + fb
             print(">>> step: %i    e:%10.4f" % (nstep, e / EH))
             vel = vel + 0.5 * (f_old + f) / massm * dt
 
@@ -347,17 +347,21 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
             # langevin dynamics
             KE = (0.5 * massm * vel * vel).sum() / vel.shape[0] / vel.shape[1]
             Tseq = KE * 2.0 / KB
-            print(">>> step: %i    e:%10.4f    T:%8.4f" % (nstep, e / EH, Tseq))
+            print(">>> step: %i    e:%10.4f    T:%8.4f" %
+                  (nstep, e / EH, Tseq))
             # step1
             p1 = vscale * vel
             p2 = fscale * invmass * f
-            p3 = noisescale * sqrtinvmass * np.random.normal(0., np.ones(vel.shape))
+            p3 = noisescale * sqrtinvmass * \
+                np.random.normal(0., np.ones(vel.shape))
             vel = p1 + p2 + p3
             if "fixcom" in md and md["fixcom"]:
                 vcom = vel.mean(axis=0)
-                ke_pre = (0.5 * massm * vel * vel).sum() / vel.shape[0] / vel.shape[1]
+                ke_pre = (0.5 * massm * vel * vel).sum() / \
+                    vel.shape[0] / vel.shape[1]
                 v_remove = vel - vcom
-                ke_after = (0.5 * massm * v_remove * v_remove).sum() / v_remove.shape[0] / v_remove.shape[1]
+                ke_after = (0.5 * massm * v_remove * v_remove).sum() / \
+                    v_remove.shape[0] / v_remove.shape[1]
                 vel = v_remove * np.sqrt(ke_pre / ke_after)
                 print(">>> remove COM motion", vcom / (ANGSTROM / FS))
             #print(p1, p2, p3)
@@ -371,9 +375,9 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
             for cv in cons:
                 if cv["type"].upper() == "B":
                     ia, ib = cv["index"]
-                    fa, fb = bondforce(crd[ia], crd[ib], cv["value"] * ANGSTROM, k=cv["kconst"] if "kconst" in cv else kconst) # kJ / A^2
-                    f[ia,:] = f[ia,:] + fa
-                    f[ib,:] = f[ib,:] + fb
+                    fa, fb = bondforce(crd[ia], crd[ib], cv["value"] * ANGSTROM, k=cv["kconst"] if "kconst" in cv else kconst)  # kJ / A^2
+                    f[ia, :] = f[ia, :] + fa
+                    f[ib, :] = f[ib, :] + fb
         # check_traj
         if "time" in chk and nstep == chk["time"]:
             for cv in chk["cv"]:
@@ -395,7 +399,7 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
                         ifquit = False
                         break
             if ifquit:
-                print(">>> Get state %s. Stop."%state["name"])
+                print(">>> Get state %s. Stop." % state["name"])
                 exit()
 
 
