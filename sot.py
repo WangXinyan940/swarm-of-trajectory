@@ -25,7 +25,7 @@ FS = 1e-15  # fs -> s
 EH = 4.35974417e-18  # Hartrees -> J
 H = 6.626069934e-34
 KB = 1.38064852e-23
-kconst = 1000000.0 * (1. / 6.02e23 / ANGSTROM ** 2)
+kconst = 500000.0e3 * (1. / 6.02e23 / ANGSTROM ** 2)
 
 
 def printTitle():
@@ -127,7 +127,8 @@ def genQMInput(atom, crd, temp, pre=False, nstep=-1):
             wrt.append("Temparary input file for step %i\n" % nstep)
         elif "[coord]" in line:
             for ni in range(len(atom)):
-                wrt.append("%s  %16.8f %16.8f %16.8f\n" % (atom[ni], crd[ni][0], crd[ni][1], crd[ni][2]))
+                wrt.append("%s  %16.8f %16.8f %16.8f\n" %
+                           (atom[ni], crd[ni][0], crd[ni][1], crd[ni][2]))
         elif line[0] == "#":
             wrt.append(line)
             if pre == True:
@@ -291,8 +292,8 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
     """
     Run dynamics. Using Velocity verlet algorithm.
     """
-    md, prt, cons, chk, stop = conf["md"], conf["print"], conf[
-        "constraint"], conf["check"], conf["stop"]
+    md, prt, res, cons, chk, stop = conf["md"], conf["print"], conf[
+        "restraint"], conf["constraint"], conf["check"], conf["stop"]
     dt = md["deltat"] * FS
     massm = genMassMat(atom) * AMU
     if md["type"].upper() == "NVT":
@@ -310,10 +311,11 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
 
     e, f = grad(atom, crd, nstep=-1)
     f = -f
-    for cv in cons:
+    for cv in res:
         if cv["type"].upper() == "B":
             ia, ib = cv["index"]
-            fa, fb = bondforce(crd[ia], crd[ib], cv["value"] * ANGSTROM, k=kconst)
+            fa, fb = bondforce(crd[ia], crd[ib], cv[
+                               "value"] * ANGSTROM, k=kconst)
             f[ia, :] = f[ia, :] + fa
             f[ib, :] = f[ib, :] + fb
 
@@ -334,10 +336,11 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
             f_old = f
             e, f = grad(atom, crd, nstep=nstep)
             f = -f
-            for cv in cons:
+            for cv in res:
                 if cv["type"].upper() == "B":
                     ia, ib = cv["index"]
-                    fa, fb = bondforce(crd[ia], crd[ib], cv["value"] * ANGSTROM, k=kconst)
+                    fa, fb = bondforce(crd[ia], crd[ib], cv[
+                                       "value"] * ANGSTROM, k=kconst)
                     f[ia, :] = f[ia, :] + fa
                     f[ib, :] = f[ib, :] + fb
             print(">>> step: %i    e:%10.4f" % (nstep, e / EH))
@@ -367,15 +370,18 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
             #print(p1, p2, p3)
             # step2
             pre_crd = crd
+
+            # change cartesian coordinate
             crd = crd + vel * dt
             # step3
             vel = (crd - pre_crd) / dt
             e, f = grad(atom, crd, nstep=nstep)
             f = -f
-            for cv in cons:
+            for cv in res:
                 if cv["type"].upper() == "B":
                     ia, ib = cv["index"]
-                    fa, fb = bondforce(crd[ia], crd[ib], cv["value"] * ANGSTROM, k=cv["kconst"] if "kconst" in cv else kconst)  # kJ / A^2
+                    fa, fb = bondforce(crd[ia], crd[ib], cv[
+                                       "value"] * ANGSTROM, k=cv["kconst"] if "kconst" in cv else kconst)  # kJ / A^2
                     f[ia, :] = f[ia, :] + fa
                     f[ib, :] = f[ib, :] + fb
         # check_traj
@@ -412,6 +418,11 @@ def main():
 
     global NAME
     NAME = conf["name"]
+
+    if "restraint" not in conf:
+        conf["restraint"] = []
+    if "constraint" not in conf:
+        conf["constraint"] = []
 
     # build template for qm engine
     template = conf["force"]["template"]

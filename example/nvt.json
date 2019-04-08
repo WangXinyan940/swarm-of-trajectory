@@ -10,7 +10,7 @@
 	"md":{
 		"type":"nvt",
 		"temperature":300,
-		"friction":0.5,
+		"friction":50.0,
 		"nsteps":200000,
 		"deltat":0.5,
 		"fixcom":true
@@ -30,7 +30,7 @@
 		"velocity":true
 	},
 
-	"constraint":[
+	"restraint":[
 		{
 			"type":"B",
 			"index":[0, 5],
