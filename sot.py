@@ -16,6 +16,7 @@ from __future__ import print_function
 import sys
 import os
 import json
+import pdb
 import numpy as np
 NAME = ""
 BOHR = 5.291772108e-11  # Bohr -> m
@@ -249,7 +250,7 @@ def calcGauGrad(atom, crd, template, nstep, path="g09"):
                            pre=True if nstep > 0 else False, nstep=nstep))
     os.system("{} tmp.gjf".format(path))
     grad = readFile("tmp.log", lambda x: readGauGrad(x, len(atom)))
-    os.system("cp tmp.chk old.chk && rm tmp.gjf tmp.log tmp.chk")
+    os.system("cp tmp.chk old.chk")
     return grad
 
 
@@ -292,8 +293,8 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
     """
     Run dynamics. Using Velocity verlet algorithm.
     """
-    md, prt, res, cons, chk, stop = conf["md"], conf["print"], conf[
-        "restraint"], conf["constraint"], conf["check"], conf["stop"]
+    md, prt, cons, chk, stop = conf["md"], conf["print"], conf[
+        "constraint"], conf["check"], conf["stop"]
     dt = md["deltat"] * FS
     massm = genMassMat(atom) * AMU
     if md["type"].upper() == "NVT":
@@ -311,13 +312,6 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
 
     e, f = grad(atom, crd, nstep=-1)
     f = -f
-    for cv in res:
-        if cv["type"].upper() == "B":
-            ia, ib = cv["index"]
-            fa, fb = bondforce(crd[ia], crd[ib], cv[
-                               "value"] * ANGSTROM, k=kconst)
-            f[ia, :] = f[ia, :] + fa
-            f[ib, :] = f[ib, :] + fb
 
     for nstep in range(md["nsteps"]):
         # print
@@ -336,13 +330,6 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
             f_old = f
             e, f = grad(atom, crd, nstep=nstep)
             f = -f
-            for cv in res:
-                if cv["type"].upper() == "B":
-                    ia, ib = cv["index"]
-                    fa, fb = bondforce(crd[ia], crd[ib], cv[
-                                       "value"] * ANGSTROM, k=kconst)
-                    f[ia, :] = f[ia, :] + fa
-                    f[ib, :] = f[ib, :] + fb
             print(">>> step: %i    e:%10.4f" % (nstep, e / EH))
             vel = vel + 0.5 * (f_old + f) / massm * dt
 
@@ -373,17 +360,39 @@ def dynamics(atom, initx, initv, grad=None, conf=None):
 
             # change cartesian coordinate
             crd = crd + vel * dt
+
+            # LINCS algorithm
+            # Build B, d, S, A
+            B = np.zeros((len(cons), crd.ravel().shape[0]))
+            d = np.zeros((len(cons), 1))
+            S = np.zeros((len(cons), len(cons)))
+            A = np.zeros(S.shape)
+            for n, cv in enumerate(cons):
+                if cv["type"].upper() == "B":
+                    ia, ib = cv["index"]
+                    value = cv["value"] * ANGSTROM
+                    r = np.sqrt(np.power(crd[ia,:] - crd[ib,:], 2).sum())
+                    B[n, ia * 3] = (crd[ia, 0] - crd[ib, 0]) / r
+                    B[n, ia * 3 + 1] = (crd[ia, 1] - crd[ib, 1]) / r
+                    B[n, ia * 3 + 2] = (crd[ia, 2] - crd[ib, 2]) / r
+                    B[n, ib * 3] = (crd[ib, 0] - crd[ia, 0]) / r
+                    B[n, ib * 3 + 1] = (crd[ib, 1] - crd[ia, 1]) / r
+                    B[n, ib * 3 + 2] = (crd[ib, 2] - crd[ia, 2]) / r
+                    d[n] = value
+                    S[n, n] = 1. / np.sqrt(1. / massm[ia][0] + 1. / massm[ib][0])
+            # Calculate A
+            #A = np.diag(np.ones(len(cons),)) - np.dot(S, np.dot(B,np.dot(np.diag(invmass.ravel()), np.dot(B.T, S))))
+            invMmat = np.diag(invmass.ravel())
+            Tm = np.linalg.inv(np.dot(np.dot(B, invMmat), B.T))
+            
+            #inverse = np.diag(np.ones(len(cons),)) + A + A ** 2 + A ** 3 + A ** 4
+            # Update new coord
+            crd = crd - np.dot(np.dot(invMmat, B.T), np.dot(Tm, np.dot(B, crd.reshape((-1,1))) - d)).reshape((-1,3))
+
             # step3
             vel = (crd - pre_crd) / dt
             e, f = grad(atom, crd, nstep=nstep)
             f = -f
-            for cv in res:
-                if cv["type"].upper() == "B":
-                    ia, ib = cv["index"]
-                    fa, fb = bondforce(crd[ia], crd[ib], cv[
-                                       "value"] * ANGSTROM, k=cv["kconst"] if "kconst" in cv else kconst)  # kJ / A^2
-                    f[ia, :] = f[ia, :] + fa
-                    f[ib, :] = f[ib, :] + fb
         # check_traj
         if "time" in chk and nstep == chk["time"]:
             for cv in chk["cv"]:
