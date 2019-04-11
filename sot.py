@@ -16,7 +16,6 @@ from __future__ import print_function
 import sys
 import os
 import json
-import pdb
 import numpy as np
 NAME = ""
 BOHR = 5.291772108e-11  # Bohr -> m
