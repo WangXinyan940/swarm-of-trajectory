@@ -30,7 +30,7 @@
 		"velocity":true
 	},
 
-	"restraint":[
+	"constraint":[
 		{
 			"type":"B",
 			"index":[0, 5],
